@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'SEU_REPOSITORIO_GIT'
+                git branch: 'main', url: 'https://github.com/visiosfera/AstroApp'
             }
         }
 
