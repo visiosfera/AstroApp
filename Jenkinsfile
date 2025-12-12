@@ -1,42 +1,57 @@
 pipeline {
-    agent any
+  agent any
 
-    stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/visiosfera/AstroApp'
-            }
-        }
+  environment {
+    APP_IMAGE = "astro-app:latest"
+    APP_CONTAINER = "astro-app"
+  }
 
-        stage('Install Dependencies') {
-            steps {
-                sh 'npm install'
-            }
-        }
-
-        stage('Build') {
-            steps {
-                sh 'npm run build'
-            }
-        }
-
-        stage('Docker Build') {
-            steps {
-                sh 'docker build -t astro-app:latest .'
-            }
-        }
-
-        stage('Stop Old Container') {
-            steps {
-                sh 'docker stop astro-app || true'
-                sh 'docker rm astro-app || true'
-            }
-        }
-
-        stage('Run Container') {
-            steps {
-                sh 'docker run -d --name astro-app -p 8085:80 astro-app:latest'
-            }
-        }
+  stages {
+    stage("Checkout") {
+      steps {
+        checkout scm
+      }
     }
+
+    stage("Node info") {
+      steps {
+        sh "node -v"
+        sh "npm -v"
+      }
+    }
+
+    stage("Install") {
+      steps {
+        sh "npm ci"
+      }
+    }
+
+    stage("Build Astro") {
+      steps {
+        sh "npm run build"
+      }
+    }
+
+    stage("Docker build") {
+      steps {
+        sh "docker version"
+        sh "docker build -t ${APP_IMAGE} ."
+      }
+    }
+
+    stage("Deploy container") {
+      steps {
+        sh """
+          docker rm -f ${APP_CONTAINER} || true
+          docker run -d --name ${APP_CONTAINER} -p 3000:3000 ${APP_IMAGE}
+        """
+      }
+    }
+  }
+
+  post {
+    always {
+      sh "docker ps --format 'table {{.Names}}\\t{{.Image}}\\t{{.Ports}}' | head -n 20 || true"
+    }
+  }
 }
